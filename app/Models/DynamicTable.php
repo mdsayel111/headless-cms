@@ -7,7 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 class DynamicTable extends Model
 {
     protected $fillable = [
-        'table_name'
+        'table_name',
+        'user_id',
     ];
 
     public function fields()

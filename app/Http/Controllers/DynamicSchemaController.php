@@ -9,7 +9,6 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
-use Log;
 
 class DynamicSchemaController extends Controller
 {
@@ -37,7 +36,8 @@ class DynamicSchemaController extends Controller
         'json',
         'uuid',
         'binary',
-        'enum'
+        'enum',
+        'foreignId'
     ];
 
     public function store(Request $request)
@@ -56,22 +56,34 @@ class DynamicSchemaController extends Controller
             ], 400);
         }
 
-        DB::beginTransaction();
-
         try {
 
-            $dynamicTable = DynamicTable::create([
+            DB::beginTransaction();
+            $dynamic_table = DynamicTable::create([
                 'table_name' => $tableName,
-                'user_id' => auth()->user()->id
+                'user_id' => 2
             ]);
+            foreach ($fields as $fieldName => $field) {
+                DynamicField::create([
+                    'table_id' => 1,
+                    'dynamic_table_id' => $dynamic_table->id,
+                    'field_name' => $fieldName,
+                    'field_type' => $field['type'],
+                    'nullable' => $field['nullable'] ?? false,
+                    'unique' => $field['unique'] ?? false,
+                    'relationship_type' => $field['relation']['type'] ?? null,
+                    'related_table' => $field['relation']['related_table'] ?? null,
+                    'related_field' => $field['relation']['related_field'] ?? null,
+                ]);
+            }
+            DB::commit();
 
-            Schema::create($tableName, function (Blueprint $table) use ($fields, $dynamicTable) {
+            Schema::create($tableName, function (Blueprint $table) use ($fields) {
 
                 $table->id();
 
-                foreach ($fields as $field) {
+                foreach ($fields as $fieldName => $field) {
 
-                    $fieldName = $field['name'];
                     $fieldType = $field['type'];
 
                     if (!in_array($fieldType, $this->mysqlTypes)) {
@@ -208,56 +220,31 @@ class DynamicSchemaController extends Controller
                                 ->onDelete('cascade');
                         }
                     }
-
-                    DynamicField::create([
-                        'dynamic_table_id' => $dynamicTable->id,
-                        'field_name' => $fieldName,
-                        'field_type' => $fieldType,
-                        'nullable' => $field['nullable'] ?? false,
-                        'unique' => $field['unique'] ?? false,
-                        'value' => $field['value'] ?? $field['default'] ?? null,
-                        'relationship_type' => $field['relationship']['type'] ?? null,
-                        'related_table' => $field['relationship']['related_table'] ?? null,
-                        'related_field' => $field['relationship']['related_field'] ?? null,
-                    ]);
                 }
 
                 $table->timestamps();
             });
-
-            DB::commit();
 
             return response()->json([
                 'message' => 'Dynamic table created successfully'
             ]);
 
         } catch (\Exception $e) {
-
             DB::rollBack();
-
+            if (Schema::hasTable($tableName)) {
+                Schema::drop($tableName);
+            }
             return response()->json([
                 'message' => $e->getMessage()
             ], 500);
         }
     }
-
     public function index()
     {
         $data = DynamicTable::with('fields')->paginate(10);
-        // if (!Schema::hasTable($table)) {
-        //     return response()->json([
-        //         'message' => 'Table not found'
-        //     ], 404);
-        // }
-
-        // $data = DB::table($table)
-        //     ->latest()
-        //     ->paginate(10);
-
         return Inertia::render('dynamic-table/Index', [
             'data' => $data
         ]);
-        // return response()->json($data->toArray());
     }
 
     /**
