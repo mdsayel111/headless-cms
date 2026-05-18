@@ -10,7 +10,6 @@ Route::inertia('/', 'welcome', [
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');
-    Route::inertia('panel', 'panel')->name('panel');
     Route::resource('dynamic-tables', DynamicSchemaController::class);
 });
 
