@@ -3,14 +3,20 @@ import { FieldLabel } from "./field";
 import { cn } from "@/lib/utils";
 import ErrorText from "./error-text";
 
-function Input({
+interface TextareaProps
+  extends React.ComponentProps<"textarea"> {
+  label?: string;
+  required?: boolean;
+  error?: string;
+}
+
+function Textarea({
   label,
   required,
   className,
-  type,
   error,
   ...props
-}: React.ComponentProps<"input"> & { label?: string; required?: boolean, error?: string }) {
+}: TextareaProps) {
   return (
     <div>
       {label && (
@@ -19,22 +25,23 @@ function Input({
           {required && <span className="text-red-500">*</span>}
         </FieldLabel>
       )}
-      <input
-        type={type}
-        data-slot="input"
+
+      <textarea
+        data-slot="textarea"
         className={cn(
-          "h-11 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base",
+          "w-full rounded-md border border-input bg-transparent px-3 py-1 text-base",
           "placeholder:text-sm! font-light placeholder:text-muted-foreground",
-          " focus-visible:ring-0 focus-visible:border-primary focus:outline-0",
+          "focus-visible:border-primary focus-visible:ring-0 outline-none focus:outline-0",
           className,
         )}
         {...props}
       />
 
-      <ErrorText error={error} />
+      {error && (
+        <ErrorText error={error} />
+      )}
     </div>
   );
 }
 
-export { Input };
-
+export { Textarea };

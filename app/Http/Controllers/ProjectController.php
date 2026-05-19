@@ -35,17 +35,18 @@ class ProjectController extends Controller
     {
         $request->validate([
             'name' => 'required|string',
-            'user_id' => 'required|integer'
+            'description' => 'required|string'
         ]);
+
+        $user = auth()->user();
 
         Project::create([
             'name' => $request->name,
-            'user_id' => $request->user_id
+            'description' => $request->description,
+            'user_id' => $user->id
         ]);
 
-        return response()->json([
-            'message' => 'Project created successfully'
-        ]);
+        return redirect()->back();
     }
 
     /**

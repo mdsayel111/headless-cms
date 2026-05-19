@@ -1,3 +1,4 @@
+import ProjectModalContents from '@/components/project/project-modal-contents';
 import Modal from '@/components/shared/modal/modal';
 import ActionDropdown from '@/components/shared/table/action-dropdown';
 import CreateButton from '@/components/shared/table/create-button';
@@ -26,7 +27,7 @@ export default function Dashboard({ data }: { data: any }) {
                 <CreateButton text="Create Project" onClick={() => setProjectModalOpen(true)} />
             </div>
             <Table
-                headers={['#', 'Name', 'description', 'Total table', 'Actions']}
+                headers={['#', 'Name', 'Description', 'Total table', 'Actions']}
                 wrapperClassName="rounded-t-none"
             >
                 {data?.data?.length > 0 ? (
@@ -111,7 +112,9 @@ export default function Dashboard({ data }: { data: any }) {
                     className="w-16"
                 />}
             >
-                ok
+                <ProjectModalContents
+                    handleClose={() => setProjectModalOpen(false)}
+                />
             </Modal>
         </>
     );
