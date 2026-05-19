@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\DynamicSchemaController;
+use App\Http\Controllers\ProjectController;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 
@@ -9,8 +10,8 @@ Route::inertia('/', 'welcome', [
 ])->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::inertia('dashboard', 'dashboard')->name('dashboard');
     Route::resource('dynamic-tables', DynamicSchemaController::class);
+    Route::resource('projects', ProjectController::class);
 });
 
 

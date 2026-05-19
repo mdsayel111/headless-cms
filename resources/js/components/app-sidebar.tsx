@@ -1,22 +1,23 @@
-import { Link } from '@inertiajs/react';
-import { LayoutGrid } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import {
     Sidebar,
     SidebarContent,
+    SidebarFooter,
     SidebarHeader,
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem
 } from '@/components/ui/sidebar';
-import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
+import { Link } from '@inertiajs/react';
+import { LayoutGrid } from 'lucide-react';
+import { NavUser } from './nav-user';
 
 const mainNavItems: NavItem[] = [
     {
         title: 'Projects',
-        href: dashboard(),
+        href: '/projects',
         icon: LayoutGrid,
     },
 ];
@@ -28,7 +29,7 @@ export function AppSidebar() {
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
-                            <Link href={dashboard()} prefetch>
+                            <Link href={'/projects'} prefetch>
                                 <AppLogo />
                             </Link>
                         </SidebarMenuButton>
@@ -39,6 +40,12 @@ export function AppSidebar() {
             <SidebarContent>
                 <NavMain items={mainNavItems} />
             </SidebarContent>
+
+            <SidebarFooter>
+                <Link href={'/projects'}>
+                    <NavUser />
+                </Link>
+            </SidebarFooter>
         </Sidebar>
     );
 }

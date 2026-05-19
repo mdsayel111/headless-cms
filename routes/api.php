@@ -1,5 +1,6 @@
 <?php
 use App\Http\Controllers\DynamicSchemaController;
+use App\Http\Controllers\ProjectController;
 use Illuminate\Support\Facades\Route;
 
 // Route::middleware(['auth', 'verified'])->group(function () {
@@ -10,6 +11,7 @@ use Illuminate\Support\Facades\Route;
 //     // Route::put('dynamic-tables/{table}/{id}', [DynamicSchemaController::class, 'update']);
 // });
 Route::resource('dynamic-tables', DynamicSchemaController::class);
+Route::resource('projects', ProjectController::class);
 // Route::post('/dynamic-tables', function () {
 //     return response()->json([
 //         'success' => true

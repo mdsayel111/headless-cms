@@ -7,9 +7,9 @@ import {
     TableRow
 } from "@/components/ui/table";
 
-export default function Table({ headers, children }: any) {
+export default function Table({ headers, children, wrapperClassName }: { headers: string[], children: any, wrapperClassName?: string }) {
     return (
-        <div className='border border-gray-200 rounded-b-none rounded-sm overflow-hidden'>
+        <div className={cn('border border-gray-200 rounded-b-none rounded-sm overflow-hidden', wrapperClassName)}>
             <TableComponent className="">
                 <TableHeader className="border-b border-gray-200">
                     <TableRow>

@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\DynamicField;
-use App\Models\DynamicTable;
 use Illuminate\Http\Request;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -43,7 +43,8 @@ class DynamicSchemaController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'table_name' => 'required|string|unique:dynamic_tables,table_name',
+            'project_id' => 'required|integer',
+            'table_name' => 'required|string',
             'fields' => 'required|array'
         ]);
 
@@ -58,29 +59,33 @@ class DynamicSchemaController extends Controller
 
         try {
 
-            DB::beginTransaction();
-            $dynamic_table = DynamicTable::create([
-                'table_name' => $tableName,
-                'user_id' => 2
-            ]);
-            foreach ($fields as $fieldName => $field) {
-                DynamicField::create([
-                    'table_id' => 1,
-                    'dynamic_table_id' => $dynamic_table->id,
-                    'field_name' => $fieldName,
-                    'field_type' => $field['type'],
-                    'nullable' => $field['nullable'] ?? false,
-                    'unique' => $field['unique'] ?? false,
-                    'relationship_type' => $field['relation']['type'] ?? null,
-                    'related_table' => $field['relation']['related_table'] ?? null,
-                    'related_field' => $field['relation']['related_field'] ?? null,
-                ]);
-            }
-            DB::commit();
+            // DB::beginTransaction();
+            // $dynamic_table = DynamicTable::create([
+            //     'table_name' => $tableName,
+            //     'user_id' => 2
+            // ]);
+            // foreach ($fields as $fieldName => $field) {
+            //     DynamicField::create([
+            //         'table_id' => 1,
+            //         'dynamic_table_id' => $dynamic_table->id,
+            //         'field_name' => $fieldName,
+            //         'field_type' => $field['type'],
+            //         'nullable' => $field['nullable'] ?? false,
+            //         'unique' => $field['unique'] ?? false,
+            //         'relationship_type' => $field['relation']['type'] ?? null,
+            //         'related_table' => $field['relation']['related_table'] ?? null,
+            //         'related_field' => $field['relation']['related_field'] ?? null,
+            //     ]);
+            // }
+            // DB::commit();
 
             Schema::create($tableName, function (Blueprint $table) use ($fields) {
 
                 $table->id();
+                $table->foreignId('project_id')
+                    ->constrained('projects')
+                    ->references('id')
+                    ->onDelete('cascade');
 
                 foreach ($fields as $fieldName => $field) {
 
@@ -189,6 +194,9 @@ class DynamicSchemaController extends Controller
                         case 'enum':
                             $column = $table->enum($fieldName, $field['values'] ?? ['default']);
                             break;
+                        case 'foreignId':
+                            $column = $table->foreignId($fieldName);
+                            break;
                     }
 
                     if (!empty($field['nullable'])) {
@@ -208,17 +216,12 @@ class DynamicSchemaController extends Controller
                     }
 
                     // RELATIONSHIP
-                    if (!empty($field['relationship'])) {
-
-                        $relationship = $field['relationship'];
-
-                        if ($relationship['type'] === 'belongsTo') {
-
-                            $table->foreign($fieldName)
-                                ->references($relationship['related_field'])
-                                ->on($relationship['related_table'])
-                                ->onDelete('cascade');
-                        }
+                    if (!empty($field['relation'])) {
+                        $relationship = $field['relation'];
+                        $table->foreign($fieldName)
+                            ->references($relationship['column'])
+                            ->on($relationship['table'])
+                            ->onDelete('cascade');
                     }
                 }
 
@@ -230,7 +233,7 @@ class DynamicSchemaController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            DB::rollBack();
+            // DB::rollBack();
             if (Schema::hasTable($tableName)) {
                 Schema::drop($tableName);
             }
@@ -247,9 +250,6 @@ class DynamicSchemaController extends Controller
         ]);
     }
 
-    /**
-     * GET SINGLE DATA
-     */
     public function show($table, $id)
     {
         if (!Schema::hasTable($table)) {
