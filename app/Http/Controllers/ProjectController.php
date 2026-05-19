@@ -21,7 +21,7 @@ class ProjectController extends Controller
 
         $tableKey = "Tables_in_" . $database;
 
-        // Log::info("database" . "-" . $tableKey);
+        $userId = auth()->id();
 
         // SEARCH VALUE
         $search = $request->search;
@@ -44,37 +44,60 @@ class ProjectController extends Controller
             ->withQueryString();
 
         // TRANSFORM DATA
-        $projects->getCollection()->transform(function ($project) use ($tables, $tableKey) {
+        $projects->getCollection()->transform(
+            function ($project) use ($tables, $tableKey, $userId) {
 
-            $totalTables = 0;
+                $totalTables = 0;
 
-            foreach ($tables as $table) {
+                foreach ($tables as $table) {
 
-                $tableName = $table->$tableKey;
+                    $tableName = $table->$tableKey;
 
-                if ($tableName === 'projects') {
-                    continue;
-                }
+                    // ONLY CURRENT USER TABLES
+                    if (!str_ends_with($tableName, '-' . $userId)) {
+                        continue;
+                    }
 
-                if (Schema::hasColumn($tableName, 'project_id')) {
+                    // REMOVE USER ID SUFFIX
+                    $cleanTableName = str_replace(
+                        '-' . $userId,
+                        '',
+                        $tableName
+                    );
 
-                    $exists = DB::table($tableName)
-                        ->where('project_id', $project->id)
-                        ->exists();
+                    // SKIP SYSTEM TABLES
+                    if (
+                        in_array($cleanTableName, [
+                            'projects',
+                            'users',
+                            'migrations'
+                        ])
+                    ) {
+                        continue;
+                    }
 
-                    if ($exists) {
-                        $totalTables++;
+                    // CHECK project_id COLUMN EXISTS
+                    if (Schema::hasColumn($tableName, 'project_id')) {
+
+                        // CHECK PROJECT EXISTS IN TABLE
+                        $exists = DB::table($tableName)
+                            ->where('project_id', $project->id)
+                            ->exists();
+
+                        if ($exists) {
+                            $totalTables++;
+                        }
                     }
                 }
-            }
 
-            return [
-                'id' => $project->id,
-                'name' => $project->name,
-                'description' => $project->description,
-                'total_table' => $totalTables
-            ];
-        });
+                return [
+                    'id' => $project->id,
+                    'name' => $project->name,
+                    'description' => $project->description,
+                    'total_table' => $totalTables
+                ];
+            }
+        );
 
         return Inertia::render('project/Index', [
             'data' => $projects,
@@ -165,6 +188,8 @@ class ProjectController extends Controller
 
         $tableKey = "Tables_in_" . $database;
 
+        $userId = auth()->id();
+
         $projectTables = [];
 
         // FIND PROJECT TABLES
@@ -172,8 +197,26 @@ class ProjectController extends Controller
 
             $tableName = $table->$tableKey;
 
+            // ONLY CURRENT USER TABLES
+            if (!str_ends_with($tableName, '-' . $userId)) {
+                continue;
+            }
+
+            // REMOVE USER ID SUFFIX
+            $cleanTableName = str_replace(
+                '-' . $userId,
+                '',
+                $tableName
+            );
+
             // SKIP SYSTEM TABLES
-            if (in_array($tableName, ['projects', 'migrations', 'users'])) {
+            if (
+                in_array($cleanTableName, [
+                    'projects',
+                    'users',
+                    'migrations'
+                ])
+            ) {
                 continue;
             }
 

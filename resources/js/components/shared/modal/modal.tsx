@@ -25,7 +25,7 @@ export default function Modal({
                 >
                     <X className="text-white w-5 h-5 lg:w-6 lg:h-6" />
                 </button>
-                <div className=" pt-10 md:pt-12 bg-white" />
+                <div className=" pt-10 md:pt-12 " />
                 <div className=" max-h-[65vh] custom-scrollbar  overflow-y-auto px-4 pb-4 md:px-10 md:pb-6">
                     {children}
                 </div>

@@ -52,7 +52,7 @@ export default function ProjectModalContents({ handleClose, item }: Props) {
     };
 
     return (
-        <form onSubmit={onSubmit} className="space-y-8">
+        <form onSubmit={onSubmit} className="space-y-4">
             <Input
                 placeholder="Enter your first name"
                 label="First Name"

@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\DynamicField;
+use Illuminate\Support\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -42,6 +42,7 @@ class DynamicSchemaController extends Controller
 
     public function store(Request $request)
     {
+        $user = auth()->user();
         $request->validate([
             'project_id' => 'required|integer',
             'table_name' => 'required|string',
@@ -59,27 +60,7 @@ class DynamicSchemaController extends Controller
 
         try {
 
-            // DB::beginTransaction();
-            // $dynamic_table = DynamicTable::create([
-            //     'table_name' => $tableName,
-            //     'user_id' => 2
-            // ]);
-            // foreach ($fields as $fieldName => $field) {
-            //     DynamicField::create([
-            //         'table_id' => 1,
-            //         'dynamic_table_id' => $dynamic_table->id,
-            //         'field_name' => $fieldName,
-            //         'field_type' => $field['type'],
-            //         'nullable' => $field['nullable'] ?? false,
-            //         'unique' => $field['unique'] ?? false,
-            //         'relationship_type' => $field['relation']['type'] ?? null,
-            //         'related_table' => $field['relation']['related_table'] ?? null,
-            //         'related_field' => $field['relation']['related_field'] ?? null,
-            //     ]);
-            // }
-            // DB::commit();
-
-            Schema::create($tableName, function (Blueprint $table) use ($fields) {
+            Schema::create($tableName . "-" . $user->id, function (Blueprint $table) use ($fields) {
 
                 $table->id();
                 $table->foreignId('project_id')
@@ -242,12 +223,117 @@ class DynamicSchemaController extends Controller
             ], 500);
         }
     }
-    public function index()
+    public function index(Request $request)
     {
-        $data = DynamicTable::with('fields')->paginate(10);
-        return Inertia::render('dynamic-table/Index', [
-            'data' => $data
-        ]);
+        $projectId = $request->project;
+
+        $search = $request->search;
+
+        $userId = auth()->id();
+
+        $perPage = 10;
+
+        $currentPage = LengthAwarePaginator::resolveCurrentPage();
+
+        $tables = DB::select("SHOW TABLES");
+
+        $result = [];
+
+        $id = 1;
+
+        foreach ($tables as $table) {
+
+            // GET TABLE NAME
+            $tableName = array_values((array) $table)[0];
+
+            // ONLY USER TABLES
+            if (!str_ends_with($tableName, '-' . $userId)) {
+                continue;
+            }
+
+            // REMOVE USER ID SUFFIX
+            $cleanTableName = str_replace(
+                '-' . $userId,
+                '',
+                $tableName
+            );
+
+            // SKIP SYSTEM TABLES
+            if (
+                in_array($cleanTableName, [
+                    'projects',
+                    'users',
+                    'migrations'
+                ])
+            ) {
+                continue;
+            }
+
+            // APPLY SEARCH
+            if (
+                $search &&
+                !str_contains(
+                    strtolower($cleanTableName),
+                    strtolower($search)
+                )
+            ) {
+                continue;
+            }
+
+            // CHECK project_id COLUMN EXISTS
+            if (Schema::hasColumn($tableName, 'project_id')) {
+
+                // CHECK PROJECT EXISTS
+                $exists = DB::table($tableName)
+                    ->where('project_id', $projectId)
+                    ->exists();
+
+                if ($exists) {
+
+                    // TOTAL FIELDS
+                    $totalFields = count(
+                        Schema::getColumnListing($tableName)
+                    );
+
+                    // TOTAL RECORDS
+                    $totalRecords = DB::table($tableName)
+                        ->where('project_id', $projectId)
+                        ->count();
+
+                    $result[] = [
+                        'id' => $id++,
+                        'name' => $cleanTableName,
+                        'total_field' => $totalFields,
+                        'total_record' => $totalRecords
+                    ];
+                }
+            }
+        }
+
+        // COLLECTION
+        $collection = collect($result);
+
+        // PAGINATION
+        $paginated = new LengthAwarePaginator(
+            $collection->forPage($currentPage, $perPage),
+            $collection->count(),
+            $perPage,
+            $currentPage,
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ]
+        );
+
+        return Inertia::render(
+            'dynamic-table/Index',
+            [
+                'data' => $paginated,
+                'filters' => [
+                    'search' => $search
+                ]
+            ]
+        );
     }
 
     public function show($table, $id)
