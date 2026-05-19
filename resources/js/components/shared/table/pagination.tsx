@@ -1,3 +1,4 @@
+import { router } from "@inertiajs/react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -5,16 +6,15 @@ import { cn } from "@/lib/utils";
 type PaginationProps = {
     page: number;
     totalPages: number;
-    // onPageChange: (page: number) => void;
-    setPage?: any
     className?: string;
+    links?: any;
 };
 
 export function Pagination({
     page,
     totalPages,
-    setPage,
     className,
+    links
 }: PaginationProps) {
     const isFirst = page === 1;
     const isLast = page === totalPages;
@@ -26,7 +26,7 @@ export function Pagination({
                 variant="outline"
                 size="sm"
                 disabled={isFirst}
-                onClick={() => setPage(page - 1)}
+                onClick={() => router.visit(links[page - 1]?.url)}
                 className="rounded border border-gray-200 shadow-[1px_1px_7px_rgba(154,154,204,0.1)]"
             >
                 Previous
@@ -47,7 +47,7 @@ export function Pagination({
                 variant="outline"
                 size="sm"
                 disabled={isLast}
-                onClick={() => setPage(page + 1)}
+                onClick={() => router.visit(links[page + 1]?.url)}
                 className="rounded border border-gray-200 shadow-[1px_1px_7px_rgba(154,154,204,0.1)]"
             >
                 Next

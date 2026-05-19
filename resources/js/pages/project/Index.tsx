@@ -7,24 +7,28 @@ import { Pagination } from '@/components/shared/table/pagination';
 import Table from '@/components/shared/table/table';
 import SearchBox from '@/components/ui/search-box';
 import { TableCell, TableRow } from '@/components/ui/table';
-import { Head } from '@inertiajs/react';
-import { Eye, PenTool, Plus, Trash2 } from 'lucide-react';
+import { Head, router } from '@inertiajs/react';
+import { PenTool, Table2, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 export default function Dashboard({ data }: { data: any }) {
     const [search, setSearch] = useState('');
-    const [projectModalOpen, setProjectModalOpen] = useState(false);
+    const [projectCreateModalOpen, setCreateProjectModalOpen] = useState(false);
+    const [projectUpdateModalOpen, setUpdateProjectModalOpen] = useState(false);
+    const [updateItem, setUpdateItem] = useState(null);
 
     return (
         <>
             <Head title="Projects" />
             <div className="p-4 flex flex-col md:flex-row gap-6 lg:gap-4 lg:items-center justify-end rounded-t-sm border border-default border-b-0 overflow-hidden">
-                <SearchBox
-                    containerClassName="mx-auto lg:ml-auto lg:mr-0"
-                    value={search}
-                    onChange={setSearch}
-                />
-                <CreateButton text="Create Project" onClick={() => setProjectModalOpen(true)} />
+                <form onSubmit={() => router.visit('/projects' + '?search=' + search)}>
+                    <SearchBox
+                        containerClassName="mx-auto lg:ml-auto lg:mr-0"
+                        value={search}
+                        onChange={setSearch}
+                    />
+                </form>
+                <CreateButton text="Create Project" onClick={() => setCreateProjectModalOpen(true)} />
             </div>
             <Table
                 headers={['#', 'Name', 'Description', 'Total table', 'Actions']}
@@ -46,42 +50,32 @@ export default function Dashboard({ data }: { data: any }) {
                             </TableCell>
 
                             <TableCell className="px-4 py-3 border-r">
-                                {item?.fields?.length}
+                                {item?.total_table}
                             </TableCell>
 
                             <TableCell className="px-4 py-3 text-right">
                                 <ActionDropdown
                                     actions={[
                                         {
+                                            label: "All Table",
+                                            onClick: () => {
+                                                router.visit('/dynamic-tables?project=' + item.id);
+                                            },
+                                            color: "text-yellow-500 hover:text-yellow-500!",
+                                            Icon: Table2
+                                        },
+                                        {
                                             label: "Edit",
                                             onClick: () => {
-                                                // setId(item.id);
-                                                // setEditModalOpen(true);
+                                                setUpdateProjectModalOpen(true);
+                                                setUpdateItem(item);
                                             },
                                             color: "text-green-500 hover:text-green-500!",
                                             Icon: PenTool
                                         },
                                         {
-                                            label: "Add Table",
-                                            onClick: () => {
-                                                // setId(item.id);
-                                                // setEditModalOpen(true);
-                                            },
-                                            color: "text-yellow-500 hover:text-yellow-500!",
-                                            Icon: Plus
-                                        },
-                                        {
-                                            label: "View Tables",
-                                            onClick: () => {
-                                                // setId(item.id);
-                                                // setEditModalOpen(true);
-                                            },
-                                            color: "text-blue-500 hover:text-blue-500!",
-                                            Icon: Eye
-                                        },
-                                        {
                                             label: "Delete",
-                                            onClick: () => { },
+                                            onClick: () => router.delete('/projects/' + item.id),
                                             color: "text-red-500 hover:text-red-500!",
                                             Icon: Trash2
                                         },
@@ -97,23 +91,36 @@ export default function Dashboard({ data }: { data: any }) {
             </Table>
             <Pagination
                 className="mt-4"
-                page={0}
-                totalPages={0}
-                setPage={() => { }}
+                page={data?.current_page}
+                totalPages={data?.last_page}
+                links={data?.links}
             />
 
 
             {/* modals */}
             <Modal
-                isOpen={projectModalOpen}
-                setIsOpen={setProjectModalOpen}
+                isOpen={projectCreateModalOpen}
+                setIsOpen={setCreateProjectModalOpen}
                 icon={<img
                     src="/icons/project.png"
                     className="w-16"
                 />}
             >
                 <ProjectModalContents
-                    handleClose={() => setProjectModalOpen(false)}
+                    handleClose={() => setCreateProjectModalOpen(false)}
+                />
+            </Modal>
+            <Modal
+                isOpen={projectUpdateModalOpen}
+                setIsOpen={setUpdateProjectModalOpen}
+                icon={<img
+                    src="/icons/project.png"
+                    className="w-16"
+                />}
+            >
+                <ProjectModalContents
+                    item={updateItem}
+                    handleClose={() => setUpdateProjectModalOpen(false)}
                 />
             </Modal>
         </>

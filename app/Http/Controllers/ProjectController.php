@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Project;
+use DB;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 
 class ProjectController extends Controller
@@ -11,11 +13,74 @@ class ProjectController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $data = Project::paginate(10);
+        $database = env('DB_DATABASE');
+
+        $tables = DB::select("SHOW TABLES");
+
+        $tableKey = "Tables_in_" . $database;
+
+        // Log::info("database" . "-" . $tableKey);
+
+        // SEARCH VALUE
+        $search = $request->search;
+
+        // QUERY
+        $query = Project::query();
+
+        // APPLY SEARCH
+        if ($search) {
+
+            $query->where(function ($q) use ($search) {
+
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        // PAGINATION
+        $projects = $query->paginate(10)
+            ->withQueryString();
+
+        // TRANSFORM DATA
+        $projects->getCollection()->transform(function ($project) use ($tables, $tableKey) {
+
+            $totalTables = 0;
+
+            foreach ($tables as $table) {
+
+                $tableName = $table->$tableKey;
+
+                if ($tableName === 'projects') {
+                    continue;
+                }
+
+                if (Schema::hasColumn($tableName, 'project_id')) {
+
+                    $exists = DB::table($tableName)
+                        ->where('project_id', $project->id)
+                        ->exists();
+
+                    if ($exists) {
+                        $totalTables++;
+                    }
+                }
+            }
+
+            return [
+                'id' => $project->id,
+                'name' => $project->name,
+                'description' => $project->description,
+                'total_table' => $totalTables
+            ];
+        });
+
         return Inertia::render('project/Index', [
-            'data' => $data
+            'data' => $projects,
+            'filters' => [
+                'search' => $search
+            ]
         ]);
     }
 
@@ -70,14 +135,76 @@ class ProjectController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        //
+        $request->validate([
+            'name' => 'required|string',
+            'description' => 'required|string'
+        ]);
+
+        $project = Project::findOrFail($id);
+
+        // OPTIONAL SECURITY CHECK
+        if ($project->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        $project->update([
+            'name' => $request->name,
+            'description' => $request->description
+        ]);
+
+        return redirect()->back();
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(string $id)
     {
-        //
+        $project = Project::findOrFail($id);
+
+        $database = env('DB_DATABASE');
+
+        $tables = DB::select("SHOW TABLES");
+
+        $tableKey = "Tables_in_" . $database;
+
+        $projectTables = [];
+
+        // FIND PROJECT TABLES
+        foreach ($tables as $table) {
+
+            $tableName = $table->$tableKey;
+
+            // SKIP SYSTEM TABLES
+            if (in_array($tableName, ['projects', 'migrations', 'users'])) {
+                continue;
+            }
+
+            // CHECK project_id COLUMN
+            if (Schema::hasColumn($tableName, 'project_id')) {
+
+                $exists = DB::table($tableName)
+                    ->where('project_id', $project->id)
+                    ->exists();
+
+                if ($exists) {
+                    $projectTables[] = $tableName;
+                }
+            }
+        }
+
+        // DISABLE FOREIGN KEY CHECKS
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+
+        // DROP TABLES
+        foreach ($projectTables as $tableName) {
+
+            Schema::dropIfExists($tableName);
+        }
+
+        // ENABLE FOREIGN KEY CHECKS
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+
+        // DELETE PROJECT
+        $project->delete();
+
+        return redirect()->back();
     }
 }

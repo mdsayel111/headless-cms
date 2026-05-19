@@ -26,9 +26,9 @@ export function AppSidebar() {
     return (
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>
-                <SidebarMenu>
+                <SidebarMenu className='hover:bg-transparent'>
                     <SidebarMenuItem>
-                        <SidebarMenuButton size="lg" asChild>
+                        <SidebarMenuButton size="lg" asChild className='hover:bg-transparent text-black hover:text-black'>
                             <Link href={'/projects'} prefetch>
                                 <AppLogo />
                             </Link>

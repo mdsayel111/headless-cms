@@ -6,32 +6,49 @@ import { useForm } from "@inertiajs/react";
 
 interface Props {
     handleClose: () => void;
+    item?: any;
 }
 
-export default function ProjectModalContents({ handleClose }: Props) {
+export default function ProjectModalContents({ handleClose, item }: Props) {
 
     const {
         data,
         setData,
+        processing,
         post,
+        put,
         errors
     } = useForm({
-        name: "",
-        description: "",
+        name: item?.name ?? "",
+        description: item?.description ?? "",
     });
 
     const onSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        post("/projects", {
-            preserveScroll: true,
-            onSuccess: () => {
-                handleClose();
-            },
-            onError: (errors) => {
-                console.log(errors);
-            }
-        });
+        if (item) {
+            put("/projects/" + item.id, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    handleClose();
+                    toast.success("Project updated successfully");
+                },
+                onError: (errors) => {
+                    console.log(errors);
+                }
+            });
+        } else {
+            post("/projects", {
+                preserveScroll: true,
+                onSuccess: () => {
+                    handleClose();
+                    toast.success("Project created successfully");
+                },
+                onError: (errors) => {
+                    console.log(errors);
+                }
+            });
+        }
     };
 
     return (
@@ -63,8 +80,8 @@ export default function ProjectModalContents({ handleClose }: Props) {
                         label: "Save",
                         type: "submit",
                         className: "bg-primary hover:bg-primary",
-                        // loading: isSubmitting,
-                        // disabled: isSubmitting,
+                        loading: processing,
+                        disabled: processing,
                     },
                 ]}
             />
