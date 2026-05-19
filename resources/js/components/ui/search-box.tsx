@@ -26,7 +26,7 @@ export default function SearchBox({ containerClassName, value, onChange }: { con
                 onChange={(e) => onChange(e.target.value)}
                 type="text"
                 id="input-group-1"
-                className="block w-full ps-9 pe-3 py-2 bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-sm focus:ring-brand focus:border-brand shadow-xs placeholder:text-body border-primary"
+                className="block w-full ps-9 pe-3 py-2 bg-neutral-secondary-medium border outline-0 text-heading text-sm rounded-sm focus:ring-primary focus:border-primary shadow-xs placeholder:text-body border-primary"
                 placeholder="Search"
             />
         </div>
