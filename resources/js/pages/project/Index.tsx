@@ -1,3 +1,4 @@
+import Modal from '@/components/shared/modal/modal';
 import ActionDropdown from '@/components/shared/table/action-dropdown';
 import CreateButton from '@/components/shared/table/create-button';
 import NoItem from '@/components/shared/table/no-item';
@@ -6,11 +7,12 @@ import Table from '@/components/shared/table/table';
 import SearchBox from '@/components/ui/search-box';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Head } from '@inertiajs/react';
-import { PenTool, Trash2 } from 'lucide-react';
+import { Eye, PenTool, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 export default function Dashboard({ data }: { data: any }) {
     const [search, setSearch] = useState('');
+    const [projectModalOpen, setProjectModalOpen] = useState(false);
 
     return (
         <>
@@ -21,10 +23,10 @@ export default function Dashboard({ data }: { data: any }) {
                     value={search}
                     onChange={setSearch}
                 />
-                <CreateButton text="Create Project" />
+                <CreateButton text="Create Project" onClick={() => setProjectModalOpen(true)} />
             </div>
             <Table
-                headers={['#', 'Name', 'Total Fields', 'Actions']}
+                headers={['#', 'Name', 'description', 'Total table', 'Actions']}
                 wrapperClassName="rounded-t-none"
             >
                 {data?.data?.length > 0 ? (
@@ -36,7 +38,10 @@ export default function Dashboard({ data }: { data: any }) {
                             </TableCell>
 
                             <TableCell className="px-4 py-3 border-r">
-                                {item?.table_name}
+                                {item?.name}
+                            </TableCell>
+                            <TableCell className="px-4 py-3 border-r">
+                                {item?.description}
                             </TableCell>
 
                             <TableCell className="px-4 py-3 border-r">
@@ -61,8 +66,8 @@ export default function Dashboard({ data }: { data: any }) {
                                                 // setId(item.id);
                                                 // setEditModalOpen(true);
                                             },
-                                            color: "text-green-500 hover:text-green-500!",
-                                            Icon: PenTool
+                                            color: "text-yellow-500 hover:text-yellow-500!",
+                                            Icon: Plus
                                         },
                                         {
                                             label: "View Tables",
@@ -70,8 +75,8 @@ export default function Dashboard({ data }: { data: any }) {
                                                 // setId(item.id);
                                                 // setEditModalOpen(true);
                                             },
-                                            color: "text-green-500 hover:text-green-500!",
-                                            Icon: PenTool
+                                            color: "text-blue-500 hover:text-blue-500!",
+                                            Icon: Eye
                                         },
                                         {
                                             label: "Delete",
@@ -86,7 +91,7 @@ export default function Dashboard({ data }: { data: any }) {
                         </TableRow>
                     ))
                 ) : (
-                    <NoItem colSpan={6} />
+                    <NoItem />
                 )}
             </Table>
             <Pagination
@@ -95,6 +100,19 @@ export default function Dashboard({ data }: { data: any }) {
                 totalPages={0}
                 setPage={() => { }}
             />
+
+
+            {/* modals */}
+            <Modal
+                isOpen={projectModalOpen}
+                setIsOpen={setProjectModalOpen}
+                icon={<img
+                    src="/icons/project.png"
+                    className="w-16"
+                />}
+            >
+                ok
+            </Modal>
         </>
     );
 }

@@ -41,7 +41,7 @@ export default function ActionDropdown({ actions }: ActionDropdownProps) {
                     <DropdownMenuItem
                         key={index}
                         onClick={action.onClick}
-                        className={cn("action.className", action.actionItemClassName, action.color)}
+                        className={cn("action.className cursor-pointer", action.actionItemClassName, action.color)}
                     >
                         {/* {action.icon} */}
                         {action.Icon && <action.Icon className={cn("mr-2 h-4 w-4", action.iconClassName, action.color)} />}
