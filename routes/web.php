@@ -10,8 +10,8 @@ Route::inertia('/', 'welcome', [
 ])->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::resource('dynamic-tables', DynamicSchemaController::class);
     Route::resource('projects', ProjectController::class);
+    Route::resource('dynamic-tables', DynamicSchemaController::class);
 });
 
 

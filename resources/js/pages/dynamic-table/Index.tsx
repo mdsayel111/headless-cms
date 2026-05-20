@@ -18,6 +18,8 @@ export default function DynamicTable({ data }: { data: any }) {
     const [projectUpdateModalOpen, setUpdateProjectModalOpen] = useState(false);
     const [updateItem, setUpdateItem] = useState(null);
 
+    console.log(data)
+
 
     return (
         <>

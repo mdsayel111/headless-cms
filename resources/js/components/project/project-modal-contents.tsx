@@ -54,20 +54,21 @@ export default function ProjectModalContents({ handleClose, item }: Props) {
     return (
         <form onSubmit={onSubmit} className="space-y-4">
             <Input
-                placeholder="Enter your first name"
-                label="First Name"
+                placeholder="Enter name"
+                label="Name"
                 required
                 value={data.name}
                 onChange={e => setData('name', e.target.value)}
                 error={errors.name}
             />
             <Textarea
-                placeholder="Enter your last name"
-                label="Last Name"
+                placeholder="Enter description"
+                label="Description"
                 required
                 value={data.description}
                 onChange={e => setData('description', e.target.value)}
                 error={errors.description}
+                className="min-h-30"
             />
             <ModalButtons
                 buttons={[
