@@ -17,6 +17,8 @@ export default function Dashboard({ data }: { data: any }) {
     const [projectUpdateModalOpen, setUpdateProjectModalOpen] = useState(false);
     const [updateItem, setUpdateItem] = useState(null);
 
+    console.log(data)
+
     return (
         <>
             <Head title="Projects" />
@@ -50,7 +52,7 @@ export default function Dashboard({ data }: { data: any }) {
                             </TableCell>
 
                             <TableCell className="px-4 py-3 border-r">
-                                {item?.total_table}
+                                {item?.table?.length}
                             </TableCell>
 
                             <TableCell className="px-4 py-3 text-right">

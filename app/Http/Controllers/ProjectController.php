@@ -1,10 +1,12 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use App\Models\DynamicTableFieldMeta;
+use App\Models\DynamicTableMeta;
 use App\Models\Project;
 use DB;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 
@@ -15,14 +17,6 @@ class ProjectController extends Controller
      */
     public function index(Request $request)
     {
-        $database = env('DB_DATABASE');
-
-        $tables = DB::select("SHOW TABLES");
-
-        $tableKey = "Tables_in_" . $database;
-
-        $userId = auth()->id();
-
         // SEARCH VALUE
         $search = $request->search;
 
@@ -31,73 +25,18 @@ class ProjectController extends Controller
 
         // APPLY SEARCH
         if ($search) {
-
-            $query->where(function ($q) use ($search) {
-
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('description', 'like', "%{$search}%");
-            });
+            $query->where('user_id', auth()->id())
+                ->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                        ->orWhere('description', 'like', "%{$search}%");
+                });
         }
 
         // PAGINATION
-        $projects = $query->paginate(10)
+        $projects = $query->with('table')
+            ->paginate(10)
             ->withQueryString();
 
-        // TRANSFORM DATA
-        $projects->getCollection()->transform(
-            function ($project) use ($tables, $tableKey, $userId) {
-
-                $totalTables = 0;
-
-                foreach ($tables as $table) {
-
-                    $tableName = $table->$tableKey;
-
-                    // ONLY CURRENT USER TABLES
-                    if (!str_ends_with($tableName, '-' . $userId)) {
-                        continue;
-                    }
-
-                    // REMOVE USER ID SUFFIX
-                    $cleanTableName = str_replace(
-                        '-' . $userId,
-                        '',
-                        $tableName
-                    );
-
-                    // SKIP SYSTEM TABLES
-                    if (
-                        in_array($cleanTableName, [
-                            'projects',
-                            'users',
-                            'migrations'
-                        ])
-                    ) {
-                        continue;
-                    }
-
-                    // CHECK project_id COLUMN EXISTS
-                    if (Schema::hasColumn($tableName, 'project_id')) {
-
-                        // CHECK PROJECT EXISTS IN TABLE
-                        $exists = DB::table($tableName)
-                            ->where('project_id', $project->id)
-                            ->exists();
-
-                        if ($exists) {
-                            $totalTables++;
-                        }
-                    }
-                }
-
-                return [
-                    'id' => $project->id,
-                    'name' => $project->name,
-                    'description' => $project->description,
-                    'total_table' => $totalTables
-                ];
-            }
-        );
 
         return Inertia::render('project/Index', [
             'data' => $projects,
@@ -180,74 +119,62 @@ class ProjectController extends Controller
 
     public function destroy(string $id)
     {
-        $project = Project::findOrFail($id);
+        $project = Project::with('table')->findOrFail($id);
+        $failedTables = [];
 
-        $database = env('DB_DATABASE');
+        try {
+            DB::statement('SET FOREIGN_KEY_CHECKS=0');
 
-        $tables = DB::select("SHOW TABLES");
+            foreach ($project->table as $table) {
 
-        $tableKey = "Tables_in_" . $database;
+                try {
 
-        $userId = auth()->id();
+                    Schema::dropIfExists($table->table_name);
 
-        $projectTables = [];
+                    // VERIFY TABLE REALLY DELETED
+                    if (Schema::hasTable($table->table_name)) {
+                        $failedTables[] = $table->id;
+                    }
 
-        // FIND PROJECT TABLES
-        foreach ($tables as $table) {
+                } catch (\Throwable $e) {
 
-            $tableName = $table->$tableKey;
+                    $failedTables[] = $table->table_name;
 
-            // ONLY CURRENT USER TABLES
-            if (!str_ends_with($tableName, '-' . $userId)) {
-                continue;
-            }
-
-            // REMOVE USER ID SUFFIX
-            $cleanTableName = str_replace(
-                '-' . $userId,
-                '',
-                $tableName
-            );
-
-            // SKIP SYSTEM TABLES
-            if (
-                in_array($cleanTableName, [
-                    'projects',
-                    'users',
-                    'migrations'
-                ])
-            ) {
-                continue;
-            }
-
-            // CHECK project_id COLUMN
-            if (Schema::hasColumn($tableName, 'project_id')) {
-
-                $exists = DB::table($tableName)
-                    ->where('project_id', $project->id)
-                    ->exists();
-
-                if ($exists) {
-                    $projectTables[] = $tableName;
+                    Log::error($e);
                 }
             }
+
+        } finally {
+
+            DB::statement('SET FOREIGN_KEY_CHECKS=1');
         }
 
-        // DISABLE FOREIGN KEY CHECKS
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        // ONLY NOW DELETE METADATA
+        DB::transaction(function () use ($project, $failedTables) {
+            foreach ($project->table as $table) {
+                if (in_array($table->id, $failedTables)) {
+                    DynamicTableFieldMeta::updateOrFail($table->id, [
+                        'status' => 'failed'
+                    ]);
+                } else {
+                    DynamicTableFieldMeta::where('dynamic_table_id', $table->id)->delete();
+                }
+            }
 
-        // DROP TABLES
-        foreach ($projectTables as $tableName) {
+            DynamicTableMeta::where(
+                'project_id',
+                $project->id
+            )->delete();
 
-            Schema::dropIfExists($tableName);
-        }
+            try {
+                $project->delete();
+            } catch (\Throwable $e) {
+                $project->updateOrFail([
+                    'status' => 'failed'
+                ]);
+            }
+        });
 
-        // ENABLE FOREIGN KEY CHECKS
-        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
-
-        // DELETE PROJECT
-        $project->delete();
-
-        return redirect()->back();
+        return back();
     }
 }

@@ -14,6 +14,9 @@ return new class extends Migration {
             $table->id();
             $table->foreignId('project_id');
             $table->string('table_name')->unique();
+            $table->foreignId('user_id')
+                ->constrained();
+            $table->boolean('is_delete')->default(false);
             $table->timestamps();
         });
     }

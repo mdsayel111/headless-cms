@@ -11,7 +11,9 @@ return new class extends Migration {
             $table->id();
             $table->string('name')->unique();
             $table->string('description');
-            $table->integer('user_id');
+            $table->foreignId('user_id')
+                ->constrained();
+            $table->boolean('is_delete')->default(false);
             $table->timestamps();
         });
     }

@@ -33,4 +33,15 @@ class User extends Authenticatable
             'two_factor_confirmed_at' => 'datetime',
         ];
     }
+
+    function projects()
+    {
+        return $this->hasMany(Project::class);
+    }
+
+    public function dynamicTables()
+    {
+        return $this->hasMany(DynamicTableMeta::class)
+            ->where('is_delete', false);
+    }
 }

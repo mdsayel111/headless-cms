@@ -63,162 +63,11 @@ class DynamicSchemaController extends Controller
         }
 
         try {
-
-            Schema::create($tableName, function (Blueprint $table) use ($fields) {
-
-                $table->id();
-                $table->foreignId('project_id')
-                    ->constrained('projects')
-                    ->references('id')
-                    ->onDelete('cascade');
-
-                foreach ($fields as $field) {
-
-                    $fieldType = $field['type'];
-
-                    if (!in_array($fieldType, $this->mysqlTypes)) {
-                        throw new \Exception("Invalid field type: {$fieldType}");
-                    }
-
-                    $column = null;
-
-                    switch ($fieldType) {
-
-                        case 'string':
-                            $column = $table->string($field['name']);
-                            break;
-
-                        case 'char':
-                            $column = $table->char($field['name']);
-                            break;
-
-                        case 'text':
-                            $column = $table->text($field['name']);
-                            break;
-
-                        case 'mediumText':
-                            $column = $table->mediumText($field['name']);
-                            break;
-
-                        case 'longText':
-                            $column = $table->longText($field['name']);
-                            break;
-
-                        case 'integer':
-                            $column = $table->integer($field['name']);
-                            break;
-
-                        case 'bigInteger':
-                            $column = $table->bigInteger($field['name']);
-                            break;
-
-                        case 'tinyInteger':
-                            $column = $table->tinyInteger($field['name']);
-                            break;
-
-                        case 'smallInteger':
-                            $column = $table->smallInteger($field['name']);
-                            break;
-
-                        case 'mediumInteger':
-                            $column = $table->mediumInteger($field['name']);
-                            break;
-
-                        case 'unsignedBigInteger':
-                            $column = $table->unsignedBigInteger($field['name']);
-                            break;
-
-                        case 'float':
-                            $column = $table->float($field['name']);
-                            break;
-
-                        case 'double':
-                            $column = $table->double($field['name']);
-                            break;
-
-                        case 'decimal':
-                            $column = $table->decimal($field['name'], 10, 2);
-                            break;
-
-                        case 'boolean':
-                            $column = $table->boolean($field['name']);
-                            break;
-
-                        case 'date':
-                            $column = $table->date($field['name']);
-                            break;
-
-                        case 'dateTime':
-                            $column = $table->dateTime($field['name']);
-                            break;
-
-                        case 'timestamp':
-                            $column = $table->timestamp($field['name']);
-                            break;
-
-                        case 'time':
-                            $column = $table->time($field['name']);
-                            break;
-
-                        case 'year':
-                            $column = $table->year($field['name']);
-                            break;
-
-                        case 'json':
-                            $column = $table->json($field['name']);
-                            break;
-
-                        case 'uuid':
-                            $column = $table->uuid($field['name']);
-                            break;
-
-                        case 'binary':
-                            $column = $table->binary($field['name']);
-                            break;
-
-                        case 'enum':
-                            $column = $table->enum($field['name'], $field['values'] ?? ['default']);
-                            break;
-                        case 'foreignId':
-                            $column = $table->foreignId($field['name']);
-                            break;
-                    }
-
-                    if (!empty($field['nullable'])) {
-                        $column->nullable();
-                    }
-
-                    if (!empty($field['unique'])) {
-                        $column->unique();
-                    }
-
-                    if (isset($field['default'])) {
-                        $column->default($field['default']);
-                    }
-
-                    if (!empty($field['index'])) {
-                        $column->index();
-                    }
-
-                    // RELATIONSHIP
-                    if (!empty($field['relation'])) {
-                        $relationship = $field['relation'];
-                        $table->foreign($field['name'])
-                            ->references($relationship['column'])
-                            ->on($relationship['table'])
-                            ->onDelete('cascade');
-                    }
-                }
-
-                $table->timestamps();
-            });
-
             DB::beginTransaction();
             $dynamic_table = DynamicTableMeta::create([
                 'project_id' => $request->project_id,
                 'table_name' => $tableName,
             ]);
-            Log::info($dynamic_table);
             foreach ($fields as $field) {
                 DynamicTableFieldMeta::create([
                     'dynamic_table_id' => $dynamic_table->id,
@@ -231,15 +80,166 @@ class DynamicSchemaController extends Controller
                     'unique' => $field['unique'] ?? false,
                 ]);
             }
-            DB::commit();
 
+            try {
+                Schema::create($tableName, function (Blueprint $table) use ($fields) {
+                    $table->id();
+                    $table->foreignId('project_id')
+                        ->constrained('projects')
+                        ->references('id')
+                        ->onDelete('cascade');
+
+                    foreach ($fields as $field) {
+
+                        $fieldType = $field['type'];
+
+                        if (!in_array($fieldType, $this->mysqlTypes)) {
+                            throw new \Exception("Invalid field type: {$fieldType}");
+                        }
+
+                        $column = null;
+
+                        switch ($fieldType) {
+
+                            case 'string':
+                                $column = $table->string($field['name']);
+                                break;
+
+                            case 'char':
+                                $column = $table->char($field['name']);
+                                break;
+
+                            case 'text':
+                                $column = $table->text($field['name']);
+                                break;
+
+                            case 'mediumText':
+                                $column = $table->mediumText($field['name']);
+                                break;
+
+                            case 'longText':
+                                $column = $table->longText($field['name']);
+                                break;
+
+                            case 'integer':
+                                $column = $table->integer($field['name']);
+                                break;
+
+                            case 'bigInteger':
+                                $column = $table->bigInteger($field['name']);
+                                break;
+
+                            case 'tinyInteger':
+                                $column = $table->tinyInteger($field['name']);
+                                break;
+
+                            case 'smallInteger':
+                                $column = $table->smallInteger($field['name']);
+                                break;
+
+                            case 'mediumInteger':
+                                $column = $table->mediumInteger($field['name']);
+                                break;
+
+                            case 'unsignedBigInteger':
+                                $column = $table->unsignedBigInteger($field['name']);
+                                break;
+
+                            case 'float':
+                                $column = $table->float($field['name']);
+                                break;
+
+                            case 'double':
+                                $column = $table->double($field['name']);
+                                break;
+
+                            case 'decimal':
+                                $column = $table->decimal($field['name'], 10, 2);
+                                break;
+
+                            case 'boolean':
+                                $column = $table->boolean($field['name']);
+                                break;
+
+                            case 'date':
+                                $column = $table->date($field['name']);
+                                break;
+
+                            case 'dateTime':
+                                $column = $table->dateTime($field['name']);
+                                break;
+
+                            case 'timestamp':
+                                $column = $table->timestamp($field['name']);
+                                break;
+
+                            case 'time':
+                                $column = $table->time($field['name']);
+                                break;
+
+                            case 'year':
+                                $column = $table->year($field['name']);
+                                break;
+
+                            case 'json':
+                                $column = $table->json($field['name']);
+                                break;
+
+                            case 'uuid':
+                                $column = $table->uuid($field['name']);
+                                break;
+
+                            case 'binary':
+                                $column = $table->binary($field['name']);
+                                break;
+
+                            case 'enum':
+                                $column = $table->enum($field['name'], $field['values'] ?? ['default']);
+                                break;
+                            case 'foreignId':
+                                $column = $table->foreignId($field['name']);
+                                break;
+                        }
+
+                        if (!empty($field['nullable'])) {
+                            $column->nullable();
+                        }
+
+                        if (!empty($field['unique'])) {
+                            $column->unique();
+                        }
+
+                        if (isset($field['default'])) {
+                            $column->default($field['default']);
+                        }
+
+                        if (!empty($field['index'])) {
+                            $column->index();
+                        }
+
+                        // RELATIONSHIP
+                        if (!empty($field['relation'])) {
+                            $relationship = $field['relation'];
+                            $table->foreign($field['name'])
+                                ->references($relationship['column'])
+                                ->on($relationship['table'])
+                                ->onDelete('cascade');
+                        }
+                    }
+
+                    $table->timestamps();
+                });
+            } catch (\Exception $e) {
+                DB::rollBack();
+                return response()->json([
+                    'message' => $e->getMessage()
+                ], 500);
+            }
+            DB::commit();
             return redirect()->back();
 
         } catch (\Exception $e) {
             DB::rollBack();
-            if (Schema::hasTable($tableName)) {
-                Schema::drop($tableName);
-            }
             return response()->json([
                 'message' => $e->getMessage()
             ], 500);
