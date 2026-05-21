@@ -4,6 +4,7 @@ use App\Models\DynamicTableMeta;
 use App\Models\Project;
 use App\Models\User;
 use Exception;
+use Illuminate\Support\Facades\Schema;
 
 class DeleteHierarchyService
 {
@@ -61,6 +62,21 @@ class DeleteHierarchyService
                 'status' => 'failed',
             ]);
 
+            return false;
+        }
+    }
+    public function deleteDynamicTableMeta(DynamicTableMeta $dynamicTable): bool
+    {
+        try {
+
+            Schema::dropIfExists($dynamicTable->table_name);
+            $dynamicTable->delete();
+            return true;
+
+        } catch (Exception $e) {
+            $dynamicTable->update([
+                'is_delete' => true,
+            ]);
             return false;
         }
     }

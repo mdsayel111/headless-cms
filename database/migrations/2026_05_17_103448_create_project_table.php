@@ -12,7 +12,8 @@ return new class extends Migration {
             $table->string('name')->unique();
             $table->string('description');
             $table->foreignId('user_id')
-                ->constrained();
+                ->constrained()
+                ->onDelete('cascade');
             $table->boolean('is_delete')->default(false);
             $table->timestamps();
         });

@@ -15,8 +15,7 @@ class Project extends Model
 
     function table()
     {
-        return $this->hasMany(DynamicTableMeta::class)
-            ->where('status', 'active');
+        return $this->hasMany(DynamicTableMeta::class);
     }
 
     function user()

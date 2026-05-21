@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use App\Models\DynamicTableFieldMeta;
 use App\Models\DynamicTableMeta;
 use App\Models\Project;
+use App\Services\DeleteHierarchyService;
 use DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -33,8 +34,11 @@ class ProjectController extends Controller
         }
 
         // PAGINATION
-        $projects = $query->with('table')
-            ->paginate(10)
+        $projects = $query->with([
+            'table' => function ($q) {
+                $q->where('is_delete', false);
+            }
+        ])->paginate(10)
             ->withQueryString();
 
 
@@ -120,61 +124,21 @@ class ProjectController extends Controller
     public function destroy(string $id)
     {
         $project = Project::with('table')->findOrFail($id);
-        $failedTables = [];
-
         try {
-            DB::statement('SET FOREIGN_KEY_CHECKS=0');
-
-            foreach ($project->table as $table) {
-
-                try {
-
-                    Schema::dropIfExists($table->table_name);
-
-                    // VERIFY TABLE REALLY DELETED
-                    if (Schema::hasTable($table->table_name)) {
-                        $failedTables[] = $table->id;
-                    }
-
-                } catch (\Throwable $e) {
-
-                    $failedTables[] = $table->table_name;
-
-                    Log::error($e);
-                }
-            }
-
-        } finally {
-
-            DB::statement('SET FOREIGN_KEY_CHECKS=1');
+            $delete_service = new DeleteHierarchyService();
+            $delete_service->deleteProject($project);
+            $project->delete();
+            return back();
+        } catch (\Exception $e) {
+            $project->update([
+                'is_delete' => true,
+            ]);
+            return response()->json([
+                'message' => $e->getMessage()
+            ], 500);
         }
 
-        // ONLY NOW DELETE METADATA
-        DB::transaction(function () use ($project, $failedTables) {
-            foreach ($project->table as $table) {
-                if (in_array($table->id, $failedTables)) {
-                    DynamicTableFieldMeta::updateOrFail($table->id, [
-                        'status' => 'failed'
-                    ]);
-                } else {
-                    DynamicTableFieldMeta::where('dynamic_table_id', $table->id)->delete();
-                }
-            }
 
-            DynamicTableMeta::where(
-                'project_id',
-                $project->id
-            )->delete();
-
-            try {
-                $project->delete();
-            } catch (\Throwable $e) {
-                $project->updateOrFail([
-                    'status' => 'failed'
-                ]);
-            }
-        });
-
-        return back();
     }
+
 }

@@ -13,7 +13,8 @@ return new class extends Migration {
         Schema::create('dynamic_table_field_metas', function (Blueprint $table) {
             $table->id();
             $table->foreignId('dynamic_table_id')
-                ->constrained('dynamic_table_metas');
+                ->constrained('dynamic_table_metas')
+                ->onDelete('cascade');
             $table->string('field_name');
             $table->string('field_type');
             $table->string('relation_type')->nullable();
