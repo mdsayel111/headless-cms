@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\DynamicTableFieldMeta;
 use App\Models\DynamicTableMeta;
+use App\Services\DeleteHierarchyService;
 use Illuminate\Support\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Database\Schema\Blueprint;
@@ -67,6 +68,7 @@ class DynamicSchemaController extends Controller
             $dynamic_table = DynamicTableMeta::create([
                 'project_id' => $request->project_id,
                 'table_name' => $tableName,
+                'user_id' => $user->id,
             ]);
             foreach ($fields as $field) {
                 DynamicTableFieldMeta::create([
@@ -88,7 +90,6 @@ class DynamicSchemaController extends Controller
                         ->constrained('projects')
                         ->references('id')
                         ->onDelete('cascade');
-
                     foreach ($fields as $field) {
 
                         $fieldType = $field['type'];
@@ -235,7 +236,7 @@ class DynamicSchemaController extends Controller
                     'message' => $e->getMessage()
                 ], 500);
             }
-            DB::commit();
+            // DB::commit();
             return redirect()->back();
 
         } catch (\Exception $e) {
@@ -248,107 +249,28 @@ class DynamicSchemaController extends Controller
     public function index(Request $request)
     {
         $projectId = $request->project;
-
         $search = $request->search;
 
-        $userId = auth()->id();
+        $query = DynamicTableMeta::query();
 
-        $perPage = 10;
+        $query->where('project_id', $projectId);
 
-        $currentPage = LengthAwarePaginator::resolveCurrentPage();
-
-        $tables = DB::select("SHOW TABLES");
-
-        // dump($tables);
-        $result = [];
-
-        $id = 1;
-
-        foreach ($tables as $table) {
-
-
-            // GET TABLE NAME
-            $tableName = array_values((array) $table)[0];
-
-            // ONLY USER TABLES
-            if (!str_ends_with($tableName, '-' . $userId)) {
-                continue;
-            }
-
-            // REMOVE USER ID SUFFIX
-            $cleanTableName = str_replace(
-                '-' . $userId,
-                '',
-                $tableName
-            );
-
-            // SKIP SYSTEM TABLES
-            if (
-                in_array($cleanTableName, [
-                    'projects',
-                    'users',
-                    'migrations'
-                ])
-            ) {
-                continue;
-            }
-
-            // APPLY SEARCH
-            if (
-                $search &&
-                !str_contains(
-                    strtolower($cleanTableName),
-                    strtolower($search)
-                )
-            ) {
-                continue;
-            }
-
-            // CHECK project_id COLUMN EXISTS
-            if (Schema::hasColumn($tableName, 'project_id')) {
-
-                // CHECK PROJECT EXISTS
-                $exists = DB::table($tableName)
-                    ->where('project_id', $projectId)
-                    ->exists();
-
-                if ($exists) {
-
-                    // TOTAL FIELDS
-                    $totalFields = count(
-                        Schema::getColumnListing($tableName)
-                    );
-
-                    // TOTAL RECORDS
-                    $totalRecords = DB::table($tableName)
-                        ->where('project_id', $projectId)
-                        ->count();
-
-                    $result[] = [
-                        'id' => $id++,
-                        'name' => $cleanTableName,
-                        'fields' => Schema::getColumnListing($tableName),
-                        'total_field' => $totalFields,
-                        'total_record' => $totalRecords
-                    ];
-                }
-            }
+        if ($search) {
+            $query->where('table_name', 'like', '%' . $search . '%');
         }
 
-        // COLLECTION
-        $collection = collect($result);
+        $paginated = $query->paginate(10);
 
-        // PAGINATION
-        $paginated = new LengthAwarePaginator(
-            $collection->forPage($currentPage, $perPage),
-            $collection->count(),
-            $perPage,
-            $currentPage,
-            [
-                'path' => request()->url(),
-                'query' => request()->query(),
-            ]
-        );
+        // Add record count for each table
+        $paginated->getCollection()->transform(function ($item) {
+            try {
+                $item->record_count = DB::table($item->table_name)->count();
+            } catch (\Exception $e) {
+                $item->record_count = 0;
+            }
+
+            return $item;
+        });
 
         return Inertia::render(
             'dynamic-table/Index',
@@ -382,62 +304,18 @@ class DynamicSchemaController extends Controller
         return response()->json($item);
     }
 
-    public function update(Request $request, $table, $id)
+    public function destroy($id)
     {
-        if (!Schema::hasTable($table)) {
+        $table = DynamicTableMeta::findOrFail($id);
+        if (!$table) {
             return response()->json([
                 'message' => 'Table not found'
             ], 404);
         }
+        $delete_service = new DeleteHierarchyService();
+        $delete_service->deleteDynamicTableMeta($table);
 
-        $exists = DB::table($table)
-            ->where('id', $id)
-            ->exists();
-
-        if (!$exists) {
-            return response()->json([
-                'message' => 'Data not found'
-            ], 404);
-        }
-
-        $data = $request->except([
-            '_token',
-            '_method'
-        ]);
-
-        DB::table($table)
-            ->where('id', $id)
-            ->update($data);
-
-        return response()->json([
-            'message' => 'Updated successfully'
-        ]);
+        return back();
     }
-
-    public function destroy($table, $id)
-    {
-        if (!Schema::hasTable($table)) {
-            return response()->json([
-                'message' => 'Table not found'
-            ], 404);
-        }
-
-        $exists = DB::table($table)
-            ->where('id', $id)
-            ->exists();
-
-        if (!$exists) {
-            return response()->json([
-                'message' => 'Data not found'
-            ], 404);
-        }
-
-        DB::table($table)
-            ->where('id', $id)
-            ->delete();
-
-        return response()->json([
-            'message' => 'Deleted successfully'
-        ]);
-    }
+    
 }

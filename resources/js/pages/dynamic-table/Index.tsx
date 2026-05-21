@@ -9,7 +9,7 @@ import Table from '@/components/shared/table/table';
 import SearchBox from '@/components/ui/search-box';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Head, router } from '@inertiajs/react';
-import { PenTool, Table2, Trash2 } from 'lucide-react';
+import { PenTool, Rows4, Table2, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 export default function DynamicTable({ data }: { data: any }) {
@@ -32,10 +32,10 @@ export default function DynamicTable({ data }: { data: any }) {
                         onChange={setSearch}
                     />
                 </form>
-                <CreateButton text="Create Project" onClick={() => setCreateProjectModalOpen(true)} />
+                <CreateButton text="Create Table" onClick={() => setCreateProjectModalOpen(true)} />
             </div>
             <Table
-                headers={['#', 'Name', 'Description', 'Total table', 'Actions']}
+                headers={['#', 'Name', 'Project ID', 'Total Records', 'Actions']}
                 wrapperClassName="rounded-t-none"
             >
                 {data?.data?.length > 0 ? (
@@ -47,39 +47,30 @@ export default function DynamicTable({ data }: { data: any }) {
                             </TableCell>
 
                             <TableCell className="px-4 py-3 border-r">
-                                {item?.name}
+                                {item?.table_name}
                             </TableCell>
                             <TableCell className="px-4 py-3 border-r">
-                                {item?.description}
+                                {item?.project_id}
                             </TableCell>
 
                             <TableCell className="px-4 py-3 border-r">
-                                {item?.total_table}
+                                {item?.record_count}
                             </TableCell>
 
                             <TableCell className="px-4 py-3 text-right">
                                 <ActionDropdown
                                     actions={[
                                         {
-                                            label: "All Table",
+                                            label: "Add Record",
                                             onClick: () => {
                                                 router.visit('/dynamic-tables?project=' + item.id);
                                             },
                                             color: "text-yellow-500 hover:text-yellow-500!",
-                                            Icon: Table2
-                                        },
-                                        {
-                                            label: "Edit",
-                                            onClick: () => {
-                                                setUpdateProjectModalOpen(true);
-                                                setUpdateItem(item);
-                                            },
-                                            color: "text-green-500 hover:text-green-500!",
-                                            Icon: PenTool
+                                            Icon: Rows4
                                         },
                                         {
                                             label: "Delete",
-                                            onClick: () => router.delete('/projects/' + item.id),
+                                            onClick: () => router.delete('/dynamic-tables/' + item.id),
                                             color: "text-red-500 hover:text-red-500!",
                                             Icon: Trash2
                                         },
@@ -134,7 +125,7 @@ export default function DynamicTable({ data }: { data: any }) {
 DynamicTable.layout = {
     breadcrumbs: [
         {
-            title: 'Projects'
+            title: 'Tables'
         },
     ],
 };

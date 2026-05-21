@@ -10,7 +10,8 @@ class DynamicTableMeta extends Model
         'project_id',
         'table_name',
         'status',
-        'user_id'
+        'user_id',
+        'is_delete'
     ];
 
     public function project()

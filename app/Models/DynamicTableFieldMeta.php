@@ -15,6 +15,7 @@ class DynamicTableFieldMeta extends Model
         'related_field',
         'nullable',
         'unique',
+        'is_delete'
     ];
 
     public function dynamicTable()

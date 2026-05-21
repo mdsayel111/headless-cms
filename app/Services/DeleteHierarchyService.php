@@ -4,6 +4,7 @@ use App\Models\DynamicTableMeta;
 use App\Models\Project;
 use App\Models\User;
 use Exception;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 class DeleteHierarchyService
@@ -38,11 +39,6 @@ class DeleteHierarchyService
     public function deleteProject(Project $project): bool
     {
         try {
-
-            $project->update([
-                'is_delete' => true,
-            ]);
-
             $hasFailedTables = false;
 
             foreach ($project->table as $table) {
@@ -59,7 +55,7 @@ class DeleteHierarchyService
         } catch (Exception $e) {
 
             $project->update([
-                'status' => 'failed',
+                'is_delete' => true,
             ]);
 
             return false;
@@ -84,10 +80,7 @@ class DeleteHierarchyService
     public function deleteDynamicTableFieldMeta(DynamicTableMeta $dynamicTable): bool
     {
         try {
-
-            $dynamicTable->update([
-                'is_delete' => true,
-            ]);
+            Schema::dropIfExists($dynamicTable->table_name);
 
             /**
              * external delete logic
@@ -99,7 +92,10 @@ class DeleteHierarchyService
             return true;
 
         } catch (Exception $e) {
-
+            Log::info("catch");
+            $dynamicTable->update([
+                'is_delete' => true,
+            ]);
             return false;
         }
     }
